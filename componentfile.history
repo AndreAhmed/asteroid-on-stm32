@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<History> 
+  <File usedCount="2" path="stm_lib/inc/stm32f10x_rcc.h"/>  
+  <File usedCount="2" path="stm_lib/src/stm32f10x_rcc.c"/>  
+  <File usedCount="2" path="stm_lib/inc/stm32f10x_gpio.h"/>  
+  <File usedCount="2" path="stm_lib/src/stm32f10x_gpio.c"/>  
+  <File usedCount="2" path="stm_lib/inc/stm32f10x_fsmc.h"/>  
+  <File usedCount="2" path="stm_lib/src/stm32f10x_fsmc.c"/>  
+  <File usedCount="2" path="stm_lib/inc/misc.h"/>  
+  <File usedCount="2" path="stm_lib/src/misc.c"/>  
+  <File usedCount="2" path="cmsis/core_cm3.h"/>
+</History>
