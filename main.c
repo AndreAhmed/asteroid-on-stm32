@@ -122,6 +122,7 @@ int main(void)
 	int vx = 5;
 	int vy = 6;
 
+
 	while (1) {
 		LCD_ClearFB();
 		//LCD_SetCursor(100 ,100);
@@ -130,10 +131,10 @@ int main(void)
 //				(u16) asteroid_vertices[1].y, (u16) asteroid_vertices[2].x,
 //				(u16) asteroid_vertices[2].y, LCD_Blue);
 
-		StartProfiler();
+	//	StartProfiler();
 		//LCD_Test();
-		Draw_Polygon2D(&asteroid);
-		Rotate_Polygon2D(&asteroid, 9);
+	//	Draw_Polygon2D(&asteroid);
+	//	Rotate_Polygon2D(&asteroid, 9);
 
 		if (ball.x > SCREEN_WIDTH - 20 || ball.x < 5) {
 			vx *= -1;
@@ -148,12 +149,12 @@ int main(void)
 		ball.x += vx;
 		ball.y += vy;
 
-		//LCD_DrawRect(paddle.x, paddle.y,30,10, LCD_White);
-		//LCD_DrawRect(ball.x, ball.y, 10, 10, LCD_White);
+
+		LCD_DrawRect(ball.x, ball.y, 10, 10, LCD_White);
 
 		LCD_Flip();
 
-		StopProfiler();
+		//StopProfiler();
 	}
 }
 

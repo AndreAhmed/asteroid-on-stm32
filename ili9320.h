@@ -5,7 +5,7 @@
 #include <stm32f10x_rcc.h>
 #include <stdint.h>
 
-#define AHMED_BOARD 0
+#define AHMED_BOARD 1
 #define ETIENNE_BOARD !AHMED_BOARD
 
 #define Set_Cs  GPIOD->BSRR = GPIO_Pin_7;
