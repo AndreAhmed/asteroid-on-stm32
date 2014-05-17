@@ -5,6 +5,9 @@
 #include <stm32f10x_rcc.h>
 #include <stdint.h>
 
+#define AHMED_BOARD 0
+#define ETIENNE_BOARD !AHMED_BOARD
+
 #define Set_Cs  GPIOD->BSRR = GPIO_Pin_7;
 #define Clr_Cs  GPIOD->BRR = GPIO_Pin_7;
 
@@ -25,16 +28,17 @@
 
 
 /* LCD color */
-#define LCD_White          0xFFFF
-#define LCD_Black          0x0000
-#define LCD_Blue           0x001F
-#define LCD_Orange         0xFA20
-#define LCD_Red            0xF800
-#define LCD_Magenta        0xF81F
-#define LCD_Green          0x07E0
-#define LCD_Cyan           0x07FF
-#define LCD_Yellow         0xFFE0
-
+typedef enum {
+	LCD_White = 0xFFFF,
+	LCD_Black = 0x0000,
+	LCD_Blue = 0x001F,
+	LCD_Orange = 0xFA20,
+	LCD_Red = 0xF800,
+	LCD_Magenta = 0xF81F,
+	LCD_Green = 0x07E0,
+	LCD_Cyan = 0x07FF,
+	LCD_Yellow = 0xFFE0
+} LCD_Color_t;
 
 /**
  * @brief  LCD orientation and limits
@@ -120,6 +124,7 @@ void LCD_DrawLine(float x1, float y1, float x2, float y2, u16 color);
 void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width, u16 color);
 void LCD_DrawBox(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width);
 
+void DrawSolidTriangle(int x0, int y0, int x1, int y1, int x2, int y2, int color );
 
 typedef struct Vertex2DF_TYP
 {

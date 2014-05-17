@@ -1,5 +1,5 @@
 /*****************************************************************
- * LCD Driver ili9320
+ * LCD Driver, can be used with ili9320 and ssd1289
  * Some functions are still using the direct access GRAM, needs to be rewritten
  *
  */
@@ -19,18 +19,50 @@ unsigned int LCD_DeviceCode;
 #define fbWidth    180
 #define fbHeight   140
 
+#define LCD_REG              (*((volatile unsigned short *) 0x60000000)) /* RS = 0 */
+#define LCD_RAM              (*((volatile unsigned short *) 0x60020000)) /* RS = 1 */
+
+
 u16 frameBuffer[fbWidth*fbHeight]; // 240*100*16bit
 
 u16 colorData = 0xf;
 /* Global variable to keep the orientation-mode */
 static LCD_OrientationMode_t orientation_mode = LCD_ORIENTATION_DEFAULT;
 
-u16 ili9320_ReadRegister(u16 index)
-{
-	u16 tmp;
-	tmp= *(volatile unsigned int *)(0x60000000);
 
-	return tmp;
+/*******************************************************************************
+ * Function Name  : LCD_WriteReg
+ * Description    : Writes to the selected LCD register.
+ * Input          : - LCD_Reg: address of the selected register.
+ *                  - LCD_RegValue: value to write to the selected register.
+ * Output         : None
+ * Return         : None
+ * Attention		 : None
+ *******************************************************************************/
+ static void LCD_WriteReg(uint8_t LCD_Reg,uint16_t LCD_RegValue)
+ {
+   /* Write 16-bit Index, then Write Reg */
+   LCD_REG = LCD_Reg;
+   /* Write 16-bit Reg */
+   LCD_RAM = LCD_RegValue;
+ }
+
+/*******************************************************************************
+* Function Name  : LCD_Delay
+* Description    : Delay Time
+* Input          : - nCount: Delay Time
+* Output         : None
+* Return         : None
+* Return         : None
+* Attention		 : None
+*******************************************************************************/
+static void delay_ms(uint16_t ms)
+{
+	uint16_t i,j;
+	for( i = 0; i < ms; i++ )
+	{
+		for( j = 0; j < 1141; j++ );
+	}
 }
 
 void LCD_RCC_Configurations(void)
@@ -40,11 +72,13 @@ void LCD_RCC_Configurations(void)
 
 	RCC_APB2PeriphClockCmd( RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |
 			RCC_APB2Periph_GPIOC | RCC_APB2Periph_GPIOD |
-			RCC_APB2Periph_GPIOE, ENABLE);
+			RCC_APB2Periph_GPIOE | RCC_APB2Periph_AFIO, ENABLE);
 
 }
+
 void LCD_Init_GPIO(void)
 {
+	#if AHMED_BOARD
 	GPIO_InitTypeDef GPIO_InitStructure;
 
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;				     //D1
@@ -94,12 +128,50 @@ void LCD_Init_GPIO(void)
 	GPIO_ResetBits(GPIOE, GPIO_Pin_1);		//RESET=0
 	GPIO_SetBits(GPIOD, GPIO_Pin_4);		    //RD=1
 	GPIO_SetBits(GPIOD, GPIO_Pin_5);			//WR=1
+#endif
+#if ETIENNE_BOARD
+	 /* Configure the LCD Control pins (FSMC Pins) in alternate function Push-Pull mode. */
+	  GPIO_InitTypeDef GPIO_InitStructure;
 
+	  /* PE.07(D4), PE.08(D5), PE.09(D6), PE.10(D7), PE.11(D8), PE.12(D9),
+	     PE.13(D10), PE.14(D11), PE.15(D12) */
+	  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_7 | GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 |
+	                                 GPIO_Pin_11 | GPIO_Pin_12 | GPIO_Pin_13 | GPIO_Pin_14 |
+	                                 GPIO_Pin_15;
+	  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	  GPIO_Init(GPIOE, &GPIO_InitStructure);
+
+	  /* PD.00(D2), PD.01(D3), PD.04(RD), PD.5(WR), PD.7(CS), PD.8(D13), PD.9(D14),
+	     PD.10(D15), PD.11(RS) PD.14(D0) PD.15(D1) */
+	  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_4 | GPIO_Pin_5 | GPIO_Pin_7 |
+	                                 GPIO_Pin_8 | GPIO_Pin_9 | GPIO_Pin_10 | GPIO_Pin_11 |
+	                                 GPIO_Pin_14 | GPIO_Pin_15;
+	  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
+	  GPIO_Init(GPIOD, &GPIO_InitStructure);
+#endif
+}
+
+
+/*******************************************************************************
+* Function Name  : LCD_WriteReg
+* Description    : Reads the selected LCD Register.
+* Input          : None
+* Output         : None
+* Return         : LCD Register Value.
+* Attention		 : None
+*******************************************************************************/
+static uint16_t LCD_ReadReg(uint8_t LCD_Reg)
+{
+  /* Write 16-bit Index (then Read Reg) */
+  LCD_REG = LCD_Reg;
+  /* Read 16-bit Reg */
+  return (LCD_RAM);
 }
 
 /****************************************************************************
- * Name: void LCD_Initializtion ()
- * Function: initialize ILI9320 controller
+ * Function: initialize controller
  * Entrance Parameters: None
  * Output Parameters: None
  * Note:
@@ -107,18 +179,17 @@ void LCD_Init_GPIO(void)
  ****************************************************************************/
 void LCD_Initializtion()
 {
+	LCD_DeviceCode= LCD_ReadReg(0X0000);
 
-	unsigned long color1=0;
-
-	LCD_Delay(200);
-	LCD_WriteRegister(0x0000,0x0001);    LCD_Delay(200);  //
-	LCD_Delay(200);
-	LCD_DeviceCode=ili9320_ReadRegister(0X0000);
-	LCD_DeviceCode = 0X9325;
-	LCD_Reset();
-	LCD_Delay(200);
-	if((LCD_DeviceCode==0X9325))
+	if(LCD_DeviceCode==0X9325)
 	{
+		LCD_Delay(200);
+		LCD_WriteRegister(0x0000,0x0001);
+		LCD_Delay(200);
+		LCD_Delay(200);
+		LCD_Reset();
+		LCD_Delay(200);
+
 		LCD_Delay(200);
 
 		//############# void Power_Set(void) ################//
@@ -179,20 +250,117 @@ void LCD_Initializtion()
 		LCD_WriteRegister(32, 0);
 		LCD_WriteRegister(33, 0x013F);
 
-		*(__IO uint16_t *) (Bank1_LCD_C)= 34;
-		for(color1=0;color1<76800;color1++)
-		{
-			LCD_WriteData(LCD_Black);
-		}
+	}
+	else if( LCD_DeviceCode == 0x9320 || LCD_DeviceCode == 0x9300 )
+	{
+	    //LCD_Code = ILI9320;
+	    LCD_WriteReg(0x00,0x0000);
+		LCD_WriteReg(0x01,0x0100);	/* Driver Output Contral */
+		LCD_WriteReg(0x02,0x0700);	/* LCD Driver Waveform Contral */
+		LCD_WriteReg(0x03,0x1018);	/* Entry Mode Set */
 
+		LCD_WriteReg(0x04,0x0000);	/* Scalling Contral */
+	    LCD_WriteReg(0x08,0x0202);	/* Display Contral */
+		LCD_WriteReg(0x09,0x0000);	/* Display Contral 3.(0x0000) */
+		LCD_WriteReg(0x0a,0x0000);	/* Frame Cycle Contal.(0x0000) */
+	    LCD_WriteReg(0x0c,(1<<0));	/* Extern Display Interface Contral */
+		LCD_WriteReg(0x0d,0x0000);	/* Frame Maker Position */
+		LCD_WriteReg(0x0f,0x0000);	/* Extern Display Interface Contral 2. */
 
+	    delay_ms(100);  /* delay 100 ms */
+		LCD_WriteReg(0x07,0x0101);	/* Display Contral */
+	    delay_ms(100);  /* delay 100 ms */
 
+		LCD_WriteReg(0x10,(1<<12)|(0<<8)|(1<<7)|(1<<6)|(0<<4));	/* Power Control 1.(0x16b0)	*/
+		LCD_WriteReg(0x11,0x0007);								/* Power Control 2 */
+		LCD_WriteReg(0x12,(1<<8)|(1<<4)|(0<<0));				/* Power Control 3.(0x0138)	*/
+		LCD_WriteReg(0x13,0x0b00);								/* Power Control 4 */
+		LCD_WriteReg(0x29,0x0000);								/* Power Control 7 */
+
+		LCD_WriteReg(0x2b,(1<<14)|(1<<4));
+
+		LCD_WriteReg(0x50,0);       /* Set X Start */
+		LCD_WriteReg(0x51,239);	    /* Set X End */
+		LCD_WriteReg(0x52,0);	    /* Set Y Start */
+		LCD_WriteReg(0x53,319);	    /* Set Y End */
+
+		LCD_WriteReg(0x60,0x2700);	/* Driver Output Control */
+		LCD_WriteReg(0x61,0x0001);	/* Driver Output Control */
+		LCD_WriteReg(0x6a,0x0000);	/* Vertical Srcoll Control */
+
+		LCD_WriteReg(0x80,0x0000);	/* Display Position? Partial Display 1 */
+		LCD_WriteReg(0x81,0x0000);	/* RAM Address Start? Partial Display 1 */
+		LCD_WriteReg(0x82,0x0000);	/* RAM Address End-Partial Display 1 */
+		LCD_WriteReg(0x83,0x0000);	/* Displsy Position? Partial Display 2 */
+		LCD_WriteReg(0x84,0x0000);	/* RAM Address Start? Partial Display 2 */
+		LCD_WriteReg(0x85,0x0000);	/* RAM Address End? Partial Display 2 */
+
+	    LCD_WriteReg(0x90,(0<<7)|(16<<0));	/* Frame Cycle Contral.(0x0013)	*/
+		LCD_WriteReg(0x92,0x0000);	/* Panel Interface Contral 2.(0x0000) */
+		LCD_WriteReg(0x93,0x0001);	/* Panel Interface Contral 3. */
+	    LCD_WriteReg(0x95,0x0110);	/* Frame Cycle Contral.(0x0110)	*/
+		LCD_WriteReg(0x97,(0<<8));
+		LCD_WriteReg(0x98,0x0000);	/* Frame Cycle Contral */
+
+	    LCD_WriteReg(0x07,0x0173);
+	}
+	else if( LCD_DeviceCode == 0x8989 )
+	{
+		//LCD_Code = SSD1289;
+		LCD_WriteReg(0x0000,0x0001);    delay_ms(50);   /* æ‰“å¼€æ™¶æŒ¯ */
+		LCD_WriteReg(0x0003,0xA8A4);    delay_ms(50);
+		LCD_WriteReg(0x000C,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x000D,0x080C);    delay_ms(50);
+		LCD_WriteReg(0x000E,0x2B00);    delay_ms(50);
+		LCD_WriteReg(0x001E,0x00B0);    delay_ms(50);
+		LCD_WriteReg(0x0001,0x2B3F);    delay_ms(50);   /* é©±åŠ¨è¾“å‡ºæŽ§åˆ¶320*240 0x2B3F */
+		LCD_WriteReg(0x0002,0x0600);    delay_ms(50);
+		LCD_WriteReg(0x0010,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0011,0x6070);    delay_ms(50);   /* å®šä¹‰æ•°æ�®æ ¼å¼� 16ä½�è‰² æ¨ªå±� 0x6070 */
+		LCD_WriteReg(0x0005,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0006,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0016,0xEF1C);    delay_ms(50);
+		LCD_WriteReg(0x0017,0x0003);    delay_ms(50);
+		LCD_WriteReg(0x0007,0x0133);    delay_ms(50);
+		LCD_WriteReg(0x000B,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x000F,0x0000);    delay_ms(50);   /* æ‰«æ��å¼€å§‹åœ°å�€ */
+		LCD_WriteReg(0x0041,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0042,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0048,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0049,0x013F);    delay_ms(50);
+		LCD_WriteReg(0x004A,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x004B,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0044,0xEF00);    delay_ms(50);
+		LCD_WriteReg(0x0045,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0046,0x013F);    delay_ms(50);
+		LCD_WriteReg(0x0030,0x0707);    delay_ms(50);
+		LCD_WriteReg(0x0031,0x0204);    delay_ms(50);
+		LCD_WriteReg(0x0032,0x0204);    delay_ms(50);
+		LCD_WriteReg(0x0033,0x0502);    delay_ms(50);
+		LCD_WriteReg(0x0034,0x0507);    delay_ms(50);
+		LCD_WriteReg(0x0035,0x0204);    delay_ms(50);
+		LCD_WriteReg(0x0036,0x0204);    delay_ms(50);
+		LCD_WriteReg(0x0037,0x0502);    delay_ms(50);
+		LCD_WriteReg(0x003A,0x0302);    delay_ms(50);
+		LCD_WriteReg(0x003B,0x0302);    delay_ms(50);
+		LCD_WriteReg(0x0023,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0024,0x0000);    delay_ms(50);
+		LCD_WriteReg(0x0025,0x8000);    delay_ms(50);
+		LCD_WriteReg(0x004f,0);
+		LCD_WriteReg(0x004e,0);
 	}
 
-	//LCD_Delay(200);
-	color1=0;
+	*(__IO uint16_t *) (Bank1_LCD_C)= 34;
+	for(unsigned long color1=0;color1<76800;color1++)
+	{
+		LCD_WriteData(LCD_Black);
+	}
 
+    delay_ms(50);
 }
+
+
+
 
 /****************************************************************************
  * Name: void LCD_SetCursor (unsigned int x, unsigned int y)
@@ -203,10 +371,8 @@ void LCD_Initializtion()
  * Note:
  * Call the method: LCD_SetCursor (10,10);
  ****************************************************************************/
-__inline void LCD_SetCursor(unsigned int x,unsigned int y)
+void LCD_SetCursor(unsigned int x,unsigned int y)
 {
-
-
 	LCD_WriteRegister(32, y);
 	LCD_WriteRegister(33, 319-x);
 }
@@ -224,7 +390,7 @@ __inline void LCD_SetCursor(unsigned int x,unsigned int y)
  * Note:
  * Call the method: LCD_SetWindows (0,0,100,100);
  ****************************************************************************/
-__inline void LCD_SetWindows(unsigned int StartX,unsigned int StartY,unsigned int EndX,unsigned int EndY)
+void LCD_SetWindows(unsigned int StartX,unsigned int StartY,unsigned int EndX,unsigned int EndY)
 {
 	LCD_WriteRegister(0x0050, StartY); // Horizontal GRAM Start Address
 	LCD_WriteRegister(0x0051, EndX); // Horizontal GRAM End Address
@@ -242,9 +408,6 @@ __inline void LCD_SetWindows(unsigned int StartX,unsigned int StartY,unsigned in
  ****************************************************************************/
 void LCD_Clear(u8 x,u16 y,u8 len,u16 wid, unsigned int bkColor)
 {
-
-	u32 n,temp;
-
 	if(LCD_DeviceCode==0x9325)    //
 	{
 		LCD_WriteRegister(0x0050, x); // Horizontal GRAM Start Address
@@ -253,8 +416,9 @@ void LCD_Clear(u8 x,u16 y,u8 len,u16 wid, unsigned int bkColor)
 		LCD_WriteRegister(0x0053, y+wid-1); // Vertical GRAM Start Address
 		LCD_WriteIndex(34);
 
-		temp=(u32)len*wid;
-		for(n=0;n<temp;n++)LCD_WriteData(bkColor);//
+		uint32_t temp=(u32)len*wid;
+		for(uint32_t n=0;n<temp;n++)
+			LCD_WriteData(bkColor);//
 	}
 
 
@@ -765,7 +929,7 @@ LCD_OrientationMode_t LCD_GetOrientation(void)
 
 u32 abs(s32 res)
 {
-	if(res<0)return -res;
+	if(res<0) return -res;
 	else return res;
 }
 
@@ -830,8 +994,7 @@ void LCD_DrawLine(float x1, float y1, float x2, float y2, u16 color)
 
 		// draw line in terms of x slope
 		float slope = xdiff / ydiff;
-		float y;
-		for( y = ymin; y <= ymax; y += 1.0f) {
+		for( float y = ymin; y <= ymax; y += 1.0f) {
 			float x = x1 + ((y - y1) * slope);
 			LCD_WritetoFB((int)x, (int)y, color);
 		}
@@ -849,12 +1012,10 @@ void LCD_DrawLine(float x1, float y1, float x2, float y2, u16 color)
  */
 void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width, u16 color)
 {
-	int ymin, xmin;
 	// must do clippign here
-	for (ymin = Ypos; ymin < Ypos + Height; ymin++)
+	for (int ymin = Ypos; ymin < Ypos + Height; ymin++)
 	{
-
-		for (xmin = Xpos; xmin < Xpos + Width; xmin++)
+		for (int xmin = Xpos; xmin < Xpos + Width; xmin++)
 		{
 
 			LCD_WritetoFB(xmin, ymin, color);
@@ -872,9 +1033,7 @@ void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width,
  */
 void LCD_DrawBox(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width)
 {
-	int32_t CurY;
-
-	for (CurY = Ypos; CurY < (Ypos + Height); CurY++) {
+	for (int32_t CurY = Ypos; CurY < (Ypos + Height); CurY++) {
 		LCD_DrawLine(Xpos, CurY, Width, LCD_LINE_HORIZONTAL, LCD_Red);
 	}
 }
@@ -928,9 +1087,8 @@ void DrawSolidTriangle(int x0, int y0, int x1, int y1, int x2, int y2, int color
 		dxrdy = dxdy1;
 	}
 
-	int y=0;
 	// Top of the triangle
-	for(y=y0; y<y2; y++)
+	for(int y=y0; y<y2; y++)
 	{
 		int x;
 		for(x=xl_edge; x<xr_edge; x++)
@@ -956,8 +1114,7 @@ void DrawSolidTriangle(int x0, int y0, int x1, int y1, int x2, int y2, int color
 		dxrdy = (float)(x2-x1)/(y2-y1);
 	}
 
-	y=0;
-	for(y=y2; y<y1; y++)
+	for(int y=y2; y<y1; y++)
 	{
 		int x;
 		for(x=xl_edge; x<xr_edge; x++)
@@ -975,9 +1132,7 @@ void DrawSolidTriangle(int x0, int y0, int x1, int y1, int x2, int y2, int color
 
 void LCD_ClearFB(void)
 {
-
-	u16 pixel;
-	for( pixel = 0; pixel< fbHeight*fbWidth; pixel++)
+	for( uint16_t pixel = 0; pixel< fbHeight*fbWidth; pixel++)
 	{
 		frameBuffer[pixel]= 0x0;
 
@@ -987,9 +1142,7 @@ void LCD_ClearFB(void)
 
 void buf(void)
 {
-	int i;
-
-	for(i=0;i<1000;i++)
+	for( int i=0;i<1000;i++)
 	{
 		*(__IO uint16_t *) (Bank1_LCD_D) = 0x00;
 	}
