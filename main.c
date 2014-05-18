@@ -92,13 +92,21 @@ void StopProfiler(void)
 }
 
 
-int main(void)
+void Game_Init(void)
 {
 	FSMC_LCD_Init();
-	LCD_RCC_Configurations();
 
+	LCD_RCC_Configurations();
 	LCD_Init_GPIO();
 	LCD_Initializtion();
+}
+
+
+int main(void)
+{
+
+
+	Game_Init();
 
 	// define points of asteroid
 	VERTEX2DF asteroid_vertices[8] = {
@@ -124,17 +132,17 @@ int main(void)
 
 
 	while (1) {
-		LCD_ClearFB();
-		//LCD_SetCursor(100 ,100);
-//		DrawSolidTriangle((u16) asteroid_vertices[0].x,
-//				(u16) asteroid_vertices[0].y, (u16) asteroid_vertices[1].x,
-//				(u16) asteroid_vertices[1].y, (u16) asteroid_vertices[2].x,
-//				(u16) asteroid_vertices[2].y, LCD_Blue);
 
-	//	StartProfiler();
-		//LCD_Test();
-	//	Draw_Polygon2D(&asteroid);
-	//	Rotate_Polygon2D(&asteroid, 9);
+		LCD_ClearFB();
+
+		//		DrawSolidTriangle((u16) asteroid_vertices[0].x,
+		//				(u16) asteroid_vertices[0].y, (u16) asteroid_vertices[1].x,
+		//				(u16) asteroid_vertices[1].y, (u16) asteroid_vertices[2].x,
+		//				(u16) asteroid_vertices[2].y, LCD_Blue);
+
+		//	StartProfiler();
+		//	Draw_Polygon2D(&asteroid);
+		//	Rotate_Polygon2D(&asteroid, 9);
 
 		if (ball.x > SCREEN_WIDTH - 20 || ball.x < 5) {
 			vx *= -1;
@@ -149,14 +157,14 @@ int main(void)
 		ball.x += vx;
 		ball.y += vy;
 
-
-		LCD_DrawRect(ball.x, ball.y, 10, 10, LCD_White);
+		Draw_Rect(ball.x, ball.y, 10, 10, LCD_White);
 
 		LCD_Flip();
 
 		//StopProfiler();
 	}
 }
+
 
 
 

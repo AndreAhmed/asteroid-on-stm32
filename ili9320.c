@@ -8,7 +8,6 @@
 #include "ili9320.h"
 #include "fonts.h"
 
-#include <math.h>
 
 #define Bank1_LCD_D    ((uint32_t)0x60020000)    //disp Data ADDR
 #define Bank1_LCD_C    ((uint32_t)0x60000000)	 //disp Reg ADDR
@@ -21,11 +20,7 @@ unsigned int LCD_DeviceCode;
 #define LCD_REG              (*((volatile unsigned short *) 0x60000000)) /* RS = 0 */
 #define LCD_RAM              (*((volatile unsigned short *) 0x60020000)) /* RS = 1 */
 
-u16 frameBuffer[fbWidth * fbHeight]; // 240*100*16bit
-
-u16 colorData = 0xf;
-/* Global variable to keep the orientation-mode */
-static LCD_OrientationMode_t orientation_mode = LCD_ORIENTATION_DEFAULT;
+u16 frameBuffer[fbWidth * fbHeight];
 
 /*******************************************************************************
  * Function Name  : LCD_WriteReg
@@ -296,7 +291,7 @@ void LCD_Initializtion() {
 	} else if (LCD_DeviceCode == 0x8989) {
 		//LCD_Code = SSD1289;
 		LCD_WriteReg(0x0000, 0x0001);
-		delay_ms(50); /* æ‰“å¼€æ™¶æŒ¯ */
+		delay_ms(50);
 		LCD_WriteReg(0x0003, 0xA8A4);
 		delay_ms(50);
 		LCD_WriteReg(0x000C, 0x0000);
@@ -308,13 +303,13 @@ void LCD_Initializtion() {
 		LCD_WriteReg(0x001E, 0x00B0);
 		delay_ms(50);
 		LCD_WriteReg(0x0001, 0x2B3F);
-		delay_ms(50); /* é©±åŠ¨è¾“å‡ºæŽ§åˆ¶320*240 0x2B3F */
+		delay_ms(50);
 		LCD_WriteReg(0x0002, 0x0600);
 		delay_ms(50);
 		LCD_WriteReg(0x0010, 0x0000);
 		delay_ms(50);
 		LCD_WriteReg(0x0011, 0x6070);
-		delay_ms(50); /* å®šä¹‰æ•°æ�®æ ¼å¼� 16ä½�è‰² æ¨ªå±� 0x6070 */
+		delay_ms(50);
 		LCD_WriteReg(0x0005, 0x0000);
 		delay_ms(50);
 		LCD_WriteReg(0x0006, 0x0000);
@@ -328,7 +323,7 @@ void LCD_Initializtion() {
 		LCD_WriteReg(0x000B, 0x0000);
 		delay_ms(50);
 		LCD_WriteReg(0x000F, 0x0000);
-		delay_ms(50); /* æ‰«æ��å¼€å§‹åœ°å�€ */
+		delay_ms(50);
 		LCD_WriteReg(0x0041, 0x0000);
 		delay_ms(50);
 		LCD_WriteReg(0x0042, 0x0000);
@@ -418,155 +413,6 @@ void LCD_SetWindows(unsigned int StartX, unsigned int StartY, unsigned int EndX,
 	LCD_WriteRegister(0x0053, EndY); // Vertical GRAM Start Address
 }
 
-/****************************************************************************
- * Name: void LCD_Clear (unsigned int bkColor)
- * Feature: the screen fills to the specified color, such as clear screen, then fill 0xffff
- * Entry parameters: dat fill value
- * Output Parameters: None
- * Note:
- * Call the method: LCD_Clear (0xffff);
- ****************************************************************************/
-void LCD_Clear(u8 x, u16 y, u8 len, u16 wid, unsigned int bkColor) {
-	if (LCD_DeviceCode == 0x9325) //
-			{
-		LCD_WriteRegister(0x0050, x); // Horizontal GRAM Start Address
-		LCD_WriteRegister(0x0051, x + len - 1); // Horizontal GRAM End Address
-		LCD_WriteRegister(0x0052, y); // Vertical GRAM Start Address
-		LCD_WriteRegister(0x0053, y + wid - 1); // Vertical GRAM Start Address
-		LCD_WriteIndex(34);
-
-		uint32_t temp = (u32) len * wid;
-		for (uint32_t n = 0; n < temp; n++)
-			LCD_WriteData(bkColor); //
-	}
-
-}
-
-/****************************************************************************
- * Name: unsigned int LCD_GetPoint (unsigned int x, unsigned int y)
- * Function: Get the color value of the specified coordinates
- * Entry parameters: x-line coordinates
- * Y column coordinate
- * Export parameters: the current color value coordinates
- * Note:
- * Call the method: i = LCD_GetPoint (10,10);
- ****************************************************************************/
-//unsigned int LCD_GetPoint(unsigned int x,unsigned int y)
-//{
-//  LCD_SetCursor(x,y);
-//  return (LCD_BGR2RGB(LCD_ReadRegister(0x0022)));
-//}
-
-unsigned int LCD_GetPoint(unsigned int x, unsigned int y) {
-	unsigned int temp;
-	LCD_SetCursor(x, y);
-	Clr_Cs;
-	LCD_WriteIndex(0x0022);
-	Clr_nRd;
-	temp = LCD_ReadData(); //dummy
-	Set_nRd;
-	Clr_nRd;
-	temp = LCD_ReadData();
-	Set_nRd;
-	Set_Cs;
-	if (LCD_DeviceCode != 0x7783 && LCD_DeviceCode != 0x4531)
-		temp = LCD_BGR2RGB(temp);
-
-	return (temp);
-}
-
-/****************************************************************************
- * Name: void LCD_SetPoint (unsigned int x, unsigned int y, unsigned int point)
- * Function: draw point at the specified coordinates
- * Entry parameters: x-line coordinates
- * Y column coordinate
- * Point point color
- * Output Parameters: None
- * Note:
- * Call the method: LCD_SetPoint (10,10,0 x0fe0);
- ****************************************************************************/
-void LCD_SetPoint(unsigned int x, unsigned int y, unsigned int point) {
-	if ((x > 320) || (y > 240))
-		return;
-
-	if (LCD_DeviceCode == 0x9325) {
-		LCD_WriteRegister(0x0050, x); // Horizontal GRAM Start Address
-		LCD_WriteRegister(0x0051, 0x00EF); // Horizontal GRAM End Address
-		LCD_WriteRegister(0x0052, y); // Vertical GRAM Start Address
-		LCD_WriteRegister(0x0053, 0x013F); // Vertical GRAM Start Address
-		LCD_WriteRegister(32, x); // Horizontal GRAM Start Address
-		LCD_WriteRegister(33, y); // Vertical GRAM Start Address
-		LCD_WriteIndex(34);
-		LCD_WriteData(point);
-	}
-
-}
-
-/****************************************************************************
- * Name: void LCD_DrawPicture (unsigned int StartX, unsigned int StartY, unsigned int EndX, unsigned int EndY, unsigned int * pic)
- * Function: the scope of the specified coordinates display a picture
- * Entry parameters: StartX line start coordinates
- * StartY out initial coordinates of
- * EndX line end coordinates
- * EndY column coordinates of the end
- pic picture head pointer
- * Output Parameters: None
- * Note: the level of picture taking mode format scanning, 16-bit color mode
- * Call the method: LCD_DrawPicture (0,0,100,100, (unsigned int *) demo);
- ****************************************************************************/
-void LCD_DrawPicture(unsigned int StartX, unsigned int StartY,
-		unsigned int EndX, unsigned int EndY, unsigned int *pic) {
-	unsigned int i;
-	LCD_SetWindows(StartX, StartY, EndX, EndY);
-	LCD_SetCursor(StartX, StartY);
-
-	Clr_Cs;
-
-	LCD_WriteIndex(0x0022);
-	Set_Rs;
-	for (i = 0; i < (EndX * EndY); i++) {
-		LCD_WriteData(*pic++);
-		Clr_nWr;
-		Set_nWr;
-	}
-
-	Set_Cs;
-}
-
-/*******************************************************************************
- * Function Name  : LCD_DrawMonoPict
- * Description    : Displays a monocolor picture.
- * Input          : - Pict: pointer to the picture array.
- * Output         : None
- * Return         : None
- *******************************************************************************/
-void LCD_DrawMonoPict(unsigned char *Pict) {
-	u32 index = 0, i = 0;
-
-	LCD_SetWindows(0, 0, 239, 319);
-	LCD_SetCursor(0, 0);
-
-	LCD_WriteRegister(0x03, 0x1018); // freeRTOS demo  ( LCD_Message.h format )
-
-	Clr_Cs;
-	LCD_WriteIndex(0x0022);
-	Set_Rs;
-
-	for (index = 0; index < 9600; index++) {
-		for (i = 0; i < 8; i++) {
-			if ((Pict[index] & (1 << i)) == 0x00) {
-				LCD_WriteData(LCD_Blue); // Font Color
-			} else {
-				LCD_WriteData(LCD_Yellow); // Background Color
-
-			}
-			Clr_nWr;
-			Set_nWr;
-		}
-	}
-	//LCD_WriteRegister(0x03,0x1030);	// original scan direction
-	Set_Cs;
-}
 
 /****************************************************************************
  * Name: void LCD_PutChar (unsigned int x, unsigned int y, u8 c, unsigned int charColor, unsigned int bkColor)
@@ -623,106 +469,6 @@ void LCD_Text(unsigned int x, unsigned int y, char *text,
 	}
 }
 
-/****************************************************************************
- * Name: void LCD_Test ()
- * Function: testing LCD screen
- * Entry parameters: None
- * Export Parameters: None
- * Note: Display color bar test LCD screen is working
- * Call the method: LCD_Test ();
- ****************************************************************************/
-void LCD_Test() {
-	u8 R_data, G_data, B_data, i, j;
-
-	LCD_SetCursor(0x00, 0x0000);
-	LCD_WriteRegister(0x0050, 0x00); //GRAM horizontal start position
-	LCD_WriteRegister(0x0051, 239); //GRAM horizontal end position
-	LCD_WriteRegister(0x0052, 0); //Vertical GRAM Start position
-	LCD_WriteRegister(0x0053, 319); //Vertical GRAM end position
-	Clr_Cs;
-	LCD_WriteIndex(0x0022);
-	Set_Rs;
-	R_data = 0;
-	G_data = 0;
-	B_data = 0;
-	for (j = 0; j < 50; j++) //red crescendo Article
-			{
-		for (i = 0; i < 240; i++) {
-			R_data = i / 8;
-			LCD_WriteData(R_data << 11 | G_data << 5 | B_data);
-			Clr_nWr;
-			Set_nWr;
-		}
-	}
-	R_data = 0x1f;
-	G_data = 0x3f;
-	B_data = 0x1f;
-	for (j = 0; j < 50; j++) {
-		for (i = 0; i < 240; i++) {
-			G_data = 0x3f - (i / 4);
-			B_data = 0x1f - (i / 8);
-			LCD_WriteData(R_data << 11 | G_data << 5 | B_data);
-			Clr_nWr;
-			Set_nWr;
-		}
-	}
-	//----------------------------------
-	R_data = 0;
-	G_data = 0;
-	B_data = 0;
-	for (j = 0; j < 50; j++) //green crescendo Article
-			{
-		for (i = 0; i < 240; i++) {
-			G_data = i / 4;
-			LCD_WriteData(R_data << 11 | G_data << 5 | B_data);
-			Clr_nWr;
-			Set_nWr;
-		}
-	}
-
-	R_data = 0x1f;
-	G_data = 0x3f;
-	B_data = 0x1f;
-	for (j = 0; j < 50; j++) {
-		for (i = 0; i < 240; i++) {
-			R_data = 0x1f - (i / 8);
-			B_data = 0x1f - (i / 8);
-			LCD_WriteData(R_data << 11 | G_data << 5 | B_data);
-			Clr_nWr;
-			Set_nWr;
-		}
-	}
-	//----------------------------------
-
-	R_data = 0;
-	G_data = 0;
-	B_data = 0;
-	for (j = 0; j < 60; j++) //blue crescendo Article
-			{
-		for (i = 0; i < 240; i++) {
-			B_data = i / 8;
-			LCD_WriteData(R_data << 11 | G_data << 5 | B_data);
-			Clr_nWr;
-			Set_nWr;
-		}
-	}
-
-	B_data = 0;
-	R_data = 0x1f;
-	G_data = 0x3f;
-	B_data = 0x1f;
-
-	for (j = 0; j < 60; j++) {
-		for (i = 0; i < 240; i++) {
-			G_data = 0x3f - (i / 4);
-			R_data = 0x1f - (i / 8);
-			LCD_WriteData(R_data << 11 | G_data << 5 | B_data);
-			Clr_nWr;
-			Set_nWr;
-		}
-	}
-	Set_Cs;
-}
 
 /****************************************************************************
  * Name: unsigned int LCD_BGR2RGB (unsigned int c)
@@ -752,12 +498,7 @@ unsigned int LCD_BGR2RGB(unsigned int c) {
  * Call the method: LCD_WriteIndex (0x0000);
  ****************************************************************************/
 __inline void LCD_WriteIndex(unsigned int idx) {
-	//	Clr_Rs;
-	//	Set_nRd;
-	//	LCD_WriteData(idx);
-	//	Clr_nWr;
-	//	Set_nWr;
-	//	Set_Rs;
+
 	*(__IO uint16_t *) (Bank1_LCD_C) = idx;
 }
 
@@ -771,51 +512,6 @@ __inline void LCD_WriteIndex(unsigned int idx) {
  ****************************************************************************/
 void LCD_WriteData(unsigned int data) {
 	*(__IO uint16_t *) (Bank1_LCD_D) = data;
-}
-
-/****************************************************************************
- * Name: unsigned int LCD_ReadData (void)
- * Function: Read controller data
- * Entry parameters: None
- * Output Parameters: Return to read the data
- * Note: Internal function
- * Calling method: i = LCD_ReadData ();
- ****************************************************************************/
-__inline unsigned int LCD_ReadData(void) {
-	//========================================================================
-	// **                                                                    **
-	// ** nCS       ----\__________________________________________/-------  **
-	// ** RS        ------\____________/-----------------------------------  **
-	// ** nRD       -------------------------\_____/---------------------  **
-	// ** nWR       --------\_______/--------------------------------------  **
-	// ** DB[0:15]  ---------[index]----------[data]-----------------------  **
-	// **                                                                    **
-	//========================================================================
-	unsigned int tmp;
-	GPIOB->CRH = (GPIOB->CRH & 0x00000000) | 0x44444444;
-	GPIOC->CRL = (GPIOC->CRL & 0x00000000) | 0x44444444;
-	tmp = (((GPIOB->IDR) >> 8) | ((GPIOC->IDR) << 8));
-	GPIOB->CRH = (GPIOB->CRH & 0x00000000) | 0x33333333;
-	GPIOC->CRL = (GPIOC->CRL & 0x00000000) | 0x33333333;
-	return tmp;
-}
-
-/****************************************************************************
- * Name: unsigned int LCD_ReadRegister (unsigned int index)
- * Function: Read the value of the specified address register
- * Entry parameters: index register address
- * Output Parameters: Register values
- * Note: Internal function
- * Call the method: i = LCD_ReadRegister (0x0022);
- ****************************************************************************/
-__inline unsigned int LCD_ReadRegister(unsigned int index) {
-	Clr_Cs;
-	LCD_WriteIndex(index);
-	Clr_nRd;
-	index = LCD_ReadData();
-	Set_nRd;
-	Set_Cs;
-	return index;
 }
 
 /****************************************************************************
@@ -865,21 +561,7 @@ void LCD_Reset() {
 	LCD_Delay(0xAFFFFf);
 }
 
-/****************************************************************************
- * Name: void LCD_BackLight (u8 status)
- * Function: open, off LCD backlight
- * Entry parameters: status 1: backlit 0: backlight off
- * Output Parameters: None
- * Note:
- * Call Method: LCD_BackLight (1);
- ****************************************************************************/
-void LCD_BackLight(u8 status) {
-	if (status >= 1) {
-		Lcd_Light_ON;
-	} else {
-		Lcd_Light_OFF;
-	}
-}
+
 
 /****************************************************************************
  * Name: void LCD_Delay (vu32 nCount)
@@ -895,148 +577,12 @@ void LCD_Delay(__IO uint32_t nCount) {
 }
 /*****************************************************************************************************************/
 
-/**
- * @brief Sets the LCD orientation
- * @param m: orientation mode
- * @retval none
- */
-void LCD_SetOrientation(LCD_OrientationMode_t m) {
-	uint16_t em;
 
-	switch (m) {
-	case LCD_PORTRAIT_TOP_DOWN:
-		em = 0x1030;
-		break;
-	case LCD_PORTRAIT_BOTTOM_UP:
-		em = 0x1010;
-		break;
-	case LCD_LANDSCAPE_TOP_DOWN:
-		em = 0x1018;
-		break;
-	case LCD_LANDSCAPE_BOTTOM_UP:
-		em = 0x1008;
-		break;
-	default:
-		em = 0x0130;
-		break;
-	}
-	LCD_WriteRegister(0x0003, em); /* Entry Mode */
-	orientation_mode = m;
-	LCD_SetCursor(0x00, 0x00);
-}
-
-/**
- * @brief Get current LCD orientation
- * @param none
- * @retval orientation
- */
-LCD_OrientationMode_t LCD_GetOrientation(void) {
-	return orientation_mode;
-}
-
-u32 abs(s32 res) {
-	if (res < 0)
-		return -res;
-	else
-		return res;
-}
-
-static void LCD_WritetoFB(int x, int y, u16 color) {
+void LCD_WritetoFB(int x, int y, u16 color) {
 	frameBuffer[x + y * fbWidth] = color;
 }
 
-/**
- * @brief  Displays a line.
- * @param  Xpos: specifies the X position.
- * @param  Ypos: specifies the Y position.
- * @param  Length: line length.
- * @param  Direction: line direction.
- *   This parameter can be one of the following values: LCD_LINE_VERTICAL or Horizontal.
- * @retval None
- */
-void LCD_DrawLine(float x1, float y1, float x2, float y2, u16 color) {
-	float xdiff = (x2 - x1);
-	float ydiff = (y2 - y1);
 
-	if (xdiff == 0.0f && ydiff == 0.0f) {
-		LCD_WritetoFB((int) x1, (int) y1, color);
-		return;
-	}
-
-	if (fabs(xdiff) > fabs(ydiff)) {
-		float xmin, xmax;
-
-		// set xmin to the lower x value given
-		// and xmax to the higher value
-		if (x1 < x2) {
-			xmin = x1;
-			xmax = x2;
-		} else {
-			xmin = x2;
-			xmax = x1;
-		}
-
-		// draw line in terms of y slope
-		float slope = ydiff / xdiff;
-		float x;
-		for (x = xmin; x <= xmax; x += 1.0f) {
-			float y = y1 + ((x - x1) * slope);
-			LCD_WritetoFB((int) x, (int) y, color);
-		}
-	} else {
-		float ymin, ymax;
-
-		// set ymin to the lower y value given
-		// and ymax to the higher value
-		if (y1 < y2) {
-			ymin = y1;
-			ymax = y2;
-		} else {
-			ymin = y2;
-			ymax = y1;
-		}
-
-		// draw line in terms of x slope
-		float slope = xdiff / ydiff;
-		for (float y = ymin; y <= ymax; y += 1.0f) {
-			float x = x1 + ((y - y1) * slope);
-			LCD_WritetoFB((int) x, (int) y, color);
-		}
-	}
-}
-
-/**
- * @brief  Displays a rectangle.
- * @param  Xpos: specifies the X position.
- * @param  Ypos: specifies the Y position.
- * @param  Height: display rectangle height.
- * @param  Width: display rectangle width.
- * @retval None
- */
-void LCD_DrawRect(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width,
-		u16 color) {
-	// must do clippign here
-	for (int ymin = Ypos; ymin < Ypos + Height; ymin++) {
-		for (int xmin = Xpos; xmin < Xpos + Width; xmin++) {
-
-			LCD_WritetoFB(xmin, ymin, color);
-		}
-	}
-}
-
-/**
- * @brief  Displays a box (filled rectangle).
- * @param  Xpos: specifies the X position.
- * @param  Ypos: specifies the Y position.
- * @param  Height: display rectangle height.
- * @param  Width: display rectangle width.
- * @retval None
- */
-void LCD_DrawBox(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width) {
-	for (int32_t CurY = Ypos; CurY < (Ypos + Height); CurY++) {
-		LCD_DrawLine(Xpos, CurY, Width, LCD_LINE_HORIZONTAL, LCD_Red);
-	}
-}
 
 void swap(int *i, int *j) {
 	int t = *i;
@@ -1044,74 +590,7 @@ void swap(int *i, int *j) {
 	*j = t;
 }
 
-void DrawSolidTriangle(int x0, int y0, int x1, int y1, int x2, int y2,
-		int color) {
-	// Sort our points into order of y
-	// 0 top
-	// 2 middle
-	// 1 bottom
-	if (y1 < y0) {
-		swap(&y1, &y0);
-		swap(&x1, &x0);
-	}
-	if (y2 < y0) {
-		swap(&y2, &y0);
-		swap(&x2, &x0);
-	}
-	if (y1 < y2) {
-		swap(&y2, &y1);
-		swap(&x2, &x1);
-	}
 
-	float xl_edge = (float) x0; // left edge
-	float xr_edge = (float) x0; // right edge
-
-	float dxldy;
-	float dxrdy;
-
-	float dxdy1 = (float) (x2 - x0) / (y2 - y0);
-	float dxdy2 = (float) (x1 - x0) / (y1 - y0);
-
-	if (dxdy1 < dxdy2) {
-		dxldy = dxdy1;
-		dxrdy = dxdy2;
-	} else {
-		dxldy = dxdy2;
-		dxrdy = dxdy1;
-	}
-
-	// Top of the triangle
-	for (int y = y0; y < y2; y++) {
-		int x;
-		for (x = xl_edge; x < xr_edge; x++) {
-			LCD_WritetoFB(x, y, color);
-
-		} //end for loop x
-
-		xl_edge = xl_edge + dxldy;
-		xr_edge = xr_edge + dxrdy;
-
-	} // end for loop y
-
-	  // Bottom half of the triangle
-
-	if (dxdy1 < dxdy2) {
-		dxldy = (float) (x2 - x1) / (y2 - y1);
-	} else {
-		dxrdy = (float) (x2 - x1) / (y2 - y1);
-	}
-
-	for (int y = y2; y < y1; y++) {
-		int x;
-		for (x = xl_edge; x < xr_edge; x++) {
-			LCD_WritetoFB(x, y, color);
-		} //end for loop x
-
-		xl_edge = xl_edge + dxldy;
-		xr_edge = xr_edge + dxrdy;
-
-	} // end for loop y
-}
 
 void LCD_ClearFB(void) {
 	for (uint16_t pixel = 0; pixel < fbHeight * fbWidth; pixel++) {
@@ -1121,12 +600,7 @@ void LCD_ClearFB(void) {
 
 }
 
-void buf(void) {
-	for (int i = 0; i < 1000; i++) {
-		*(__IO uint16_t *) (Bank1_LCD_D) = 0x00;
-	}
 
-}
 void LCD_Flip(void) {
 	//LCD_SetCursor(0x00, 0x0000);
 

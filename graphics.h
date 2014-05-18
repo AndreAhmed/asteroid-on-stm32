@@ -16,6 +16,7 @@ typedef struct VERTEX2DF_TYP
 } VERTEX2DF, *VERTEX2DF_PTR;
 
 
+
 // a 2D polygon
 typedef struct POLYGON2D_TYP
 {
@@ -29,11 +30,15 @@ typedef struct POLYGON2D_TYP
 } POLYGON2D, *POLYGON2D_PTR;
 
 
+
 int Draw_Polygon2D(POLYGON2D_PTR poly);
-
 int Translate_Polygon2D(POLYGON2D_PTR poly, int dx, int dy);
-
 int Rotate_Polygon2D(POLYGON2D_PTR poly, int theta);
+void DrawSolidTriangle(int x0, int y0, int x1, int y1, int x2, int y2, int color );
+void Draw_Line(float x1, float y1, float x2, float y2, u16 color);
+void Draw_Rect(uint16_t Xpos, uint16_t Ypos, uint16_t Height, uint16_t Width,
+                u16 color);
+
 int fsin( short alpha);
 int fcos( short alpha);
 
