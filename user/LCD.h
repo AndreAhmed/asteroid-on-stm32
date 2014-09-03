@@ -17,11 +17,11 @@ void LCD_clear(unsigned int p);
 void ini(void);
 
 
-void LCD_Flip();
+void LCD_Flip(void);
 void LCD_WriteRegister(unsigned int index,unsigned int dat);
 void LCD_SetCursor(unsigned int x,unsigned int y);
 void LCD_WriteIndex(unsigned int idx);
-void LCD_ClearFB();
+void LCD_ClearFB(void);
 void LCD_Text(unsigned int x, unsigned int y, char *text, unsigned int charColor, unsigned int bkColor);
 void LCD_WritetoFB(int x, int y, int color);
 void LCD_Reset(void);

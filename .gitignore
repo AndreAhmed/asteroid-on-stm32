@@ -1,0 +1,6 @@
+*.o
+Obj/
+*.map
+*.dep
+*.lst
+

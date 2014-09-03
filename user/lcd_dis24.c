@@ -434,7 +434,7 @@ void LCD_WritetoFB(int x, int y, int color)
 	frameBuffer[x + y*fbWidth] = color;
 }
 
-void LCD_ClearFB()
+void LCD_ClearFB(void)
 {
 
 	u16 pixel;
@@ -445,7 +445,7 @@ void LCD_ClearFB()
 	}
 
 }
-void LCD_Flip()
+void LCD_Flip(void)
 {
 
 	int	i;
